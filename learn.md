@@ -1,7 +1,13 @@
-[Page title='something']
+[Page]
 
+# asdf
+[/Page]
+
+[Page]
 # Hello
 
 ## Woo
 
 `nice`
+
+[/Page]

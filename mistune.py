@@ -113,7 +113,7 @@ class BlockGrammar(object):
         r'([\s\S]*?)\n'
         r'\1\2 *(?:\n+|$)',  # ```
     )
-    page = re.compile(r'\[Page\s*(title\=[\'\"].*[\'\"])?\s*\][\S\s]*', re.IGNORECASE)
+    page = re.compile(r'\[Page\]([\s\S]*)\[\/Page\]', re.IGNORECASE)
     hrule = re.compile(r'^ {0,3}[-*_](?: *[-*_]){2,} *(?:\n+|$)')
     heading = re.compile(r'^ *(#{1,6}) *([^\n]+?) *#* *(?:\n+|$)')
     lheading = re.compile(r'^([^\n]+)\n *(=|-)+ *(?:\n+|$)')
@@ -185,13 +185,13 @@ class BlockLexer(object):
 
     list_rules = (
         'newline', 'block_code', 'fences', 'lheading', 'hrule',
-        'block_quote', 'list_block', 'block_html', 'text',
+        'block_quote', 'list_block', 'block_html', 'text', 'page'
     )
 
     footnote_rules = (
         'newline', 'block_code', 'fences', 'heading',
         'nptable', 'lheading', 'hrule', 'block_quote',
-        'list_block', 'block_html', 'table', 'paragraph', 'text'
+        'list_block', 'block_html', 'table', 'paragraph', 'text', 'page'
     )
 
     def __init__(self, rules=None, **kwargs):
@@ -276,6 +276,9 @@ class BlockLexer(object):
         self.tokens.append({'type': 'hrule'})
 
     def parse_page(self, m):
+        import ipdb;
+        ipdb.set_trace()
+
         self.tokens.append({'type': 'page', 'text': m.group(1)})
 
     def parse_list_block(self, m):
@@ -511,7 +514,12 @@ class InlineGrammar(object):
     strikethrough = re.compile(r'^~~(?=\S)([\s\S]*?\S)~~')  # ~~word~~
     footnote = re.compile(r'^\[\^([^\]]+)\]')
     text = re.compile(r'^[\s\S]+?(?=[\\<!\[_*`~]|https?://| {2,}\n|$)')
-    page = re.compile(r'\[Page\s*(title\=[\'\"].*[\'\"])?\s*\][\S\s]*', re.IGNORECASE)
+    page = re.compile(
+        r'^\[Page\]'
+        r'([\S\s]*)'
+        r'^\[\\Page\]'
+        , re.IGNORECASE
+    )
 
     def hard_wrap(self):
         """Grammar for hard wrap linebreak. You don't need to add two
@@ -531,12 +539,12 @@ class InlineLexer(object):
         'escape', 'inline_html', 'autolink', 'url',
         'footnote', 'link', 'reflink', 'nolink',
         'double_emphasis', 'emphasis', 'code',
-        'linebreak', 'strikethrough', 'text',
+        'linebreak', 'strikethrough', 'text', 'page'
     ]
     inline_html_rules = [
         'escape', 'inline_html', 'autolink', 'url', 'link', 'reflink',
         'nolink', 'double_emphasis', 'emphasis', 'code',
-        'linebreak', 'strikethrough', 'text',
+        'linebreak', 'strikethrough', 'text', 'page'
     ]
 
     def __init__(self, renderer, rules=None, **kwargs):
@@ -700,7 +708,7 @@ class InlineLexer(object):
         return self.renderer.text(text)
 
     def output_page(self, m):
-        text = m.group(0)
+        text = m.group(1)
         return self.renderer.page(text)
 
 
@@ -727,6 +735,7 @@ class Renderer(object):
         return ''
 
     def page(self, code):
+        code = Markdown()(code)
         return '<page>%s\n</page>' % code
 
     def block_code(self, code, lang=None):
@@ -1104,6 +1113,7 @@ class Markdown(object):
         )
 
     def output_page(self):
+
         return self.renderer.page(
             self.token['text']
         )

@@ -1,14 +1,14 @@
-[Page]
+[Page the title]
 # asdf
 [/Page]
 
-[Page]
+[Page sdgf]
 # Hello
 ## Woo
 [/Page]
 
 
-[Page]
+[Page dfg]
 # somet
 ## asdf
 [/Page]

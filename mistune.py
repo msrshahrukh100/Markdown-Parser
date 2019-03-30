@@ -114,7 +114,7 @@ class BlockGrammar(object):
         r'\1\2 *(?:\n+|$)',  # ```
     )
     page = re.compile(
-        r'^\[Page\]'
+        r'^\[Page(.*)\]'
         r'([\S\s]*?)'
         r'\[\/Page\]'
         , re.IGNORECASE | re.MULTILINE
@@ -284,7 +284,7 @@ class BlockLexer(object):
         import ipdb;
         # ipdb.set_trace()
 
-        self.tokens.append({'type': 'page', 'text': m.group(1)})
+        self.tokens.append({'type': 'page', 'text': m.group(2), 'title': m.group(1)})
 
     def parse_list_block(self, m):
         bull = m.group(2)
@@ -520,7 +520,7 @@ class InlineGrammar(object):
     footnote = re.compile(r'^\[\^([^\]]+)\]')
     text = re.compile(r'^[\s\S]+?(?=[\\<!\[_*`~]|https?://| {2,}\n|$)')
     page = re.compile(
-        r'^\[Page\]'
+        r'^\[Page(.*)\]'
         r'([\S\s]*?)'
         r'\[\/Page\]'
         , re.IGNORECASE | re.MULTILINE
@@ -741,10 +741,10 @@ class Renderer(object):
         """
         return ''
 
-    def page(self, code):
+    def page(self, code, title):
         code = Markdown()(code)
-
-        return '<page>%s\n</page>' % code
+        title = title.strip()
+        return '<page title="%s">%s\n</page>' % (title, code)
 
     def block_code(self, code, lang=None):
         """Rendering block level code. ``pre > code``.
@@ -1121,9 +1121,8 @@ class Markdown(object):
         )
 
     def output_page(self):
-
         return self.renderer.page(
-            self.token['text']
+            self.token['text'], self.token['title']
         )
 
     def output_table(self):
@@ -1224,12 +1223,14 @@ def markdown(text, escape=True, **kwargs):
     final_response = {}
     response = Markdown(escape=escape, **kwargs)(text)
     page = re.compile(
-        r'\<page\>'
+        r'\<page\s*(title\=([\'\"].*[\'\"]))?\s*\>'
         r'([\S\s]*?)'
         r'\<\/page\>'
         , re.IGNORECASE | re.MULTILINE
     )
     for index, code in enumerate(re.findall(page, response)):
-        final_response["Page%s" % index] = code
+        final_response["Page%s" % index] = {}
+        final_response["Page%s" % index]["title"] = code[1]
+        final_response["Page%s" % index]["code"] = code[2]
 
     return final_response

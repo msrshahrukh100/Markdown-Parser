@@ -113,7 +113,12 @@ class BlockGrammar(object):
         r'([\s\S]*?)\n'
         r'\1\2 *(?:\n+|$)',  # ```
     )
-    page = re.compile(r'\[Page\]([\s\S]*)\[\/Page\]', re.IGNORECASE)
+    page = re.compile(
+        r'^\[Page\]'
+        r'([\S\s]*?)'
+        r'\[\/Page\]'
+        , re.IGNORECASE | re.MULTILINE
+    )
     hrule = re.compile(r'^ {0,3}[-*_](?: *[-*_]){2,} *(?:\n+|$)')
     heading = re.compile(r'^ *(#{1,6}) *([^\n]+?) *#* *(?:\n+|$)')
     lheading = re.compile(r'^([^\n]+)\n *(=|-)+ *(?:\n+|$)')
@@ -277,7 +282,7 @@ class BlockLexer(object):
 
     def parse_page(self, m):
         import ipdb;
-        ipdb.set_trace()
+        # ipdb.set_trace()
 
         self.tokens.append({'type': 'page', 'text': m.group(1)})
 
@@ -516,9 +521,9 @@ class InlineGrammar(object):
     text = re.compile(r'^[\s\S]+?(?=[\\<!\[_*`~]|https?://| {2,}\n|$)')
     page = re.compile(
         r'^\[Page\]'
-        r'([\S\s]*)'
-        r'^\[\\Page\]'
-        , re.IGNORECASE
+        r'([\S\s]*?)'
+        r'\[\/Page\]'
+        , re.IGNORECASE | re.MULTILINE
     )
 
     def hard_wrap(self):
@@ -719,6 +724,8 @@ class Renderer(object):
 
     def __init__(self, **kwargs):
         self.options = kwargs
+        self.page_number = 0
+        self.final_response = {}
 
     def placeholder(self):
         """Returns the default, empty output value for the renderer.
@@ -736,6 +743,7 @@ class Renderer(object):
 
     def page(self, code):
         code = Markdown()(code)
+
         return '<page>%s\n</page>' % code
 
     def block_code(self, code, lang=None):
@@ -1213,4 +1221,15 @@ def markdown(text, escape=True, **kwargs):
     :param parse_block_html: parse text only in block level html.
     :param parse_inline_html: parse text only in inline level html.
     """
-    return Markdown(escape=escape, **kwargs)(text)
+    final_response = {}
+    response = Markdown(escape=escape, **kwargs)(text)
+    page = re.compile(
+        r'\<page\>'
+        r'([\S\s]*?)'
+        r'\<\/page\>'
+        , re.IGNORECASE | re.MULTILINE
+    )
+    for index, code in enumerate(re.findall(page, response)):
+        final_response["Page%s" % index] = code
+
+    return final_response

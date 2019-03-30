@@ -1,11 +1,13 @@
 import mistune
 
 import ipdb
-# ipdb.set_trace()
 
 with open('learn.md', 'r') as file:
 	# print(file.read())
-	print(mistune.markdown(file.read()))
+
+	# ipdb.set_trace()
+	res = mistune.markdown(file.read())
+	print(res)
 # result = mistune.markdown('I am using **mistune markdown parser**')
 
 # print(result)

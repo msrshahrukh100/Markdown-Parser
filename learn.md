@@ -1,3 +1,5 @@
+[Page title='something']
+
 # Hello
 
 ## Woo

@@ -113,6 +113,7 @@ class BlockGrammar(object):
         r'([\s\S]*?)\n'
         r'\1\2 *(?:\n+|$)',  # ```
     )
+    page = re.compile(r'\[Page\s*(title\=[\'\"].*[\'\"])?\s*\][\S\s]*', re.IGNORECASE)
     hrule = re.compile(r'^ {0,3}[-*_](?: *[-*_]){2,} *(?:\n+|$)')
     heading = re.compile(r'^ *(#{1,6}) *([^\n]+?) *#* *(?:\n+|$)')
     lheading = re.compile(r'^([^\n]+)\n *(=|-)+ *(?:\n+|$)')
@@ -175,6 +176,7 @@ class BlockLexer(object):
     grammar_class = BlockGrammar
 
     default_rules = [
+        'page',
         'newline', 'hrule', 'block_code', 'fences', 'heading',
         'nptable', 'lheading', 'block_quote',
         'list_block', 'block_html', 'def_links',
@@ -272,6 +274,9 @@ class BlockLexer(object):
 
     def parse_hrule(self, m):
         self.tokens.append({'type': 'hrule'})
+
+    def parse_page(self, m):
+        self.tokens.append({'type': 'page', 'text': m.group(1)})
 
     def parse_list_block(self, m):
         bull = m.group(2)
@@ -506,6 +511,7 @@ class InlineGrammar(object):
     strikethrough = re.compile(r'^~~(?=\S)([\s\S]*?\S)~~')  # ~~word~~
     footnote = re.compile(r'^\[\^([^\]]+)\]')
     text = re.compile(r'^[\s\S]+?(?=[\\<!\[_*`~]|https?://| {2,}\n|$)')
+    page = re.compile(r'\[Page\s*(title\=[\'\"].*[\'\"])?\s*\][\S\s]*', re.IGNORECASE)
 
     def hard_wrap(self):
         """Grammar for hard wrap linebreak. You don't need to add two
@@ -693,6 +699,11 @@ class InlineLexer(object):
         text = m.group(0)
         return self.renderer.text(text)
 
+    def output_page(self, m):
+        text = m.group(0)
+        return self.renderer.page(text)
+
+
 
 class Renderer(object):
     """The default HTML renderer for rendering Markdown.
@@ -714,6 +725,9 @@ class Renderer(object):
         separate format like docx or pdf).
         """
         return ''
+
+    def page(self, code):
+        return '<page>%s\n</page>' % code
 
     def block_code(self, code, lang=None):
         """Rendering block level code. ``pre > code``.
@@ -1004,6 +1018,7 @@ class Markdown(object):
         return self.parse(text)
 
     def parse(self, text):
+
         out = self.output(preprocessing(text))
 
         keys = self.block.def_footnotes
@@ -1050,7 +1065,6 @@ class Markdown(object):
         self.tokens.reverse()
 
         self.inline.setup(self.block.def_links, self.block.def_footnotes)
-
         out = self.renderer.placeholder()
         while self.pop():
             out += self.tok()
@@ -1087,6 +1101,11 @@ class Markdown(object):
     def output_code(self):
         return self.renderer.block_code(
             self.token['text'], self.token['lang']
+        )
+
+    def output_page(self):
+        return self.renderer.page(
+            self.token['text']
         )
 
     def output_table(self):
